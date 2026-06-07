@@ -33,6 +33,7 @@ async fn main() -> Result<()> {
 
 
     let url = "https://www.deribit.com/api/v2/public/get_instruments";
+    let ticker_url = "https://www.deribit.com/api/v2/public/ticker";
 
     let resp = reqwest::Client::new()
         .get(url)
@@ -46,10 +47,29 @@ async fn main() -> Result<()> {
 
     let data: DeribitResponse = resp.json().await?;
 
+    for instrument in data.result {
+        let instrument_name = instrument.instrument_name;
+        //println!("{}", instrument_name);
+        let ticker_resp = reqwest::Client::new()
+            .get(ticker_url)
+            .query(&[
+                ("instrument_name", instrument_name)
+            ])
+            .send()
+        .await?;
+        let ticker_json: serde_json::Value = ticker_resp.json().await?;
+        println!("{:#?}", ticker_json);
+    }
 
-    println!("{:#?}", data);
+
+
+
+
+
 
     /*
+
+    // WebSocket live option market data
     let url = Url::parse("wss://www.deribit.com/ws/api/v2")?;
     let (ws_stream, _) = connect_async(url.as_str()).await?;
     let (mut write, mut read) = ws_stream.split();
@@ -62,8 +82,8 @@ async fn main() -> Result<()> {
             "method": "public/subscribe",
             "params": {
                 "channels": [
-                    "deribit_price_index.btc_usd",
-                    "deribit_volatility_index.btc_usd"]
+                    "ticker.BTC-8JUN26-50000-C.agg2"
+                    ]
         
             }
         }
@@ -76,7 +96,7 @@ async fn main() -> Result<()> {
 
         if msg.is_text() {
             let text = msg.to_text()?;
-            println!("{:?}", text);
+            println!("{:#?}", text);
         }
     }
 
